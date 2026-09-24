@@ -1,0 +1,57 @@
+# Зависимости
+node_modules/
+
+# Сборка
+dist/
+dist-ssr/
+*.local
+
+# Переменные окружения — НИКОГДА не коммитим реальные ключи
+.env
+.env.local
+.env.*.local
+
+# Закрытые ключи сервисных аккаунтов Google и Firebase.
+# Правила намеренно широкие: имена таких файлов задаёт консоль, и угадать
+# их заранее нельзя. Прошлый набор шаблонов не поймал ключ Firebase Admin,
+# потому что тот называется candy-ksendy-firebase-adminsdk-*.json
+*service-account*.json
+*serviceaccount*.json
+*-adminsdk-*.json
+candy-ksendy-*.json
+*private-key*.json
+*credentials*.json
+
+# Исходные медиафайлы кондитера (тяжёлые, хранятся вне репозитория).
+# Расширения дублируются в обоих регистрах: git различает регистр,
+# а камера отдаёт .MOV, тогда как перекодировщик — .mp4
+/_source_media/
+/_archive/
+*.MOV
+*.mov
+*.MP4
+*.mp4
+*.webm
+# ...кроме готовых к вебу роликов, которые обязаны попасть в сборку
+!/public/media/*.mp4
+!/public/media/*.webm
+
+# Папка с перекодированными исходниками — в репозитории не нужна
+/Видео в форматах/
+
+# Редакторы и ОС
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Логи
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

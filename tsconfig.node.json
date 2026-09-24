@@ -1,0 +1,41 @@
+{
+  // Код, который выполняется в Node, а не в браузере:
+  // конфигурация Vite и вспомогательные скрипты (засев базы, проверки).
+  // Раньше эти файлы не входили ни в один проект и не проверялись вовсе.
+  //
+  // Скрипты импортируют общую логику из src (каталог, калькулятор,
+  // валидация), поэтому эти файлы попадают в программу и здесь — без DOM
+  // в lib. Так и задумано: расчёт цены и правила формы не должны зависеть
+  // от браузера, и проверка обоими проектами это гарантирует. Если в такой
+  // общий модуль когда-нибудь попадёт обращение к document или window,
+  // ошибка вылезет здесь, и указывать она будет на файл в src.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    // См. пояснение в tsconfig.app.json: baseUrl устарел, пути работают
+    // относительно этого файла.
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["vite.config.ts", "scripts"]
+}

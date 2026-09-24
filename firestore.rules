@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Правила доступа к Firestore для Candy_Ksendy.
+//
+// Главный принцип: браузер клиента не пишет в базу вообще ничего.
+// Заявки создаёт только серверная функция Vercel через Firebase Admin SDK,
+// а он работает в обход этих правил по сервисному ключу.
+//
+// Публикация:  firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Заявки. Полностью закрыты для клиента: и на чтение, и на запись.
+    // Читать их может только Ксения — через админку, которая ходит
+    // за данными на сервер, а не напрямую в базу.
+    match /orders/{orderId} {
+      allow read, write: if false;
+    }
+
+    // Каталог ингредиентов. Читают все — это витрина.
+    // Пишет только администратор: проверяем и роль в токене, и запись
+    // в коллекции users, чтобы доступ нельзя было получить одним лишь
+    // самоподписанным claim'ом.
+    match /components/{componentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Категории конструктора — та же логика, что и у компонентов.
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Профили пользователей. Каждый видит только свой документ,
+    // изменить роль через клиент нельзя ни себе, ни другому.
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false;
+    }
+
+    // Счётчики антиспама. Только серверная функция, клиенту недоступны.
+    match /rate_limits/{key} {
+      allow read, write: if false;
+    }
+
+    // Всё, что не описано выше, закрыто по умолчанию.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isAdmin() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
