@@ -29,6 +29,7 @@ import {
   subscribeToAuth,
 } from '@/lib/admin-auth';
 import { isFirebaseConfigured } from '@/lib/firebase';
+import { isTelegramEnvironment, openExternalLink } from '@/lib/telegram';
 import type { AdminOrder, OrderStatus } from '@/types/api';
 import type { User } from 'firebase/auth';
 
@@ -155,9 +156,24 @@ export function AdminScreen() {
             </p>
           )}
 
-          <div className="mt-8 w-full">
-            <Button onClick={handleSignIn}>Войти через Google</Button>
-          </div>
+          {isTelegramEnvironment() ? (
+            <>
+              <p className="mt-5 flex items-start gap-2 rounded-[10px] border border-border bg-surface px-4 py-3 text-left text-[13px] text-text-primary">
+                <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
+                Встроенный браузер Telegram блокирует вход через Google. Откройте кабинет во
+                внешнем браузере телефона или компьютера.
+              </p>
+              <div className="mt-8 w-full">
+                <Button onClick={() => openExternalLink(window.location.href)}>
+                  Открыть в браузере
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="mt-8 w-full">
+              <Button onClick={handleSignIn}>Войти через Google</Button>
+            </div>
+          )}
         </main>
       </>
     );

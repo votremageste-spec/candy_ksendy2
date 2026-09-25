@@ -44,6 +44,22 @@ export function getTelegramUsername(): string {
   return username ? `@${username}` : '';
 }
 
+/**
+ * Открывает ссылку во внешнем системном браузере.
+ *
+ * Нужно там, где WebView Telegram технически не справляется — например,
+ * вход через Google: он блокирует всплывающие окна и изолирует хранилище,
+ * из-за чего OAuth-попап не может отработать ни в каком виде.
+ */
+export function openExternalLink(url: string): void {
+  const webApp = getWebApp();
+  if (webApp) {
+    webApp.openLink(url, { try_instant_view: false });
+  } else {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
+
 /** Тактильный отклик. Вне Telegram и на десктопе просто ничего не делает. */
 export function haptic(style: 'light' | 'medium' | 'heavy' = 'medium'): void {
   getWebApp()?.HapticFeedback.impactOccurred(style);

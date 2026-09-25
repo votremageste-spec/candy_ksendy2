@@ -47,6 +47,8 @@ export interface TelegramWebApp {
   close(): void;
   setHeaderColor(color: string): void;
   setBackgroundColor(color: string): void;
+  /** Открывает ссылку во внешнем браузере, минуя WebView Telegram. */
+  openLink(url: string, options?: { try_instant_view?: boolean }): void;
 
   HapticFeedback: TelegramHapticFeedback;
   BackButton: TelegramBackButton;
