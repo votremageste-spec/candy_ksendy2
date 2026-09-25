@@ -258,3 +258,92 @@ export async function updateOrderStatusInSheet(
     return error instanceof Error ? error.message : 'Неизвестная ошибка Google Sheets';
   }
 }
+
+/**
+ * Удаляет строку заявки из таблицы.
+ *
+ * Как и запись, и смена статуса, ошибок не бросает — заявка уже удалена
+ * из Firestore, и недоступность таблицы не повод откатывать это решение.
+ * Строка ищется по номеру заявки в столбце A на момент вызова: заранее
+ * запоминать номер строки нельзя, Ксения могла отсортировать таблицу.
+ */
+export async function deleteOrderRow(orderId: string): Promise<string | null> {
+  const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+  if (!spreadsheetId) {
+    return 'Не задана переменная GOOGLE_SPREADSHEET_ID';
+  }
+
+  const sheetName = process.env.GOOGLE_SHEET_NAME ?? DEFAULT_SHEET_NAME;
+
+  try {
+    const token = await getAccessToken();
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // Шаг 1: находим числовой sheetId вкладки — deleteDimension требует именно
+    // его, а не название листа.
+    const meta = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
+      { headers },
+    );
+
+    if (!meta.ok) {
+      return `Google Sheets ответил ${meta.status} при поиске листа: ${await meta.text()}`;
+    }
+
+    const metaData = (await meta.json()) as {
+      sheets?: { properties?: { sheetId?: number; title?: string } }[];
+    };
+    const sheetId = metaData.sheets?.find((sheet) => sheet.properties?.title === sheetName)
+      ?.properties?.sheetId;
+
+    if (sheetId === undefined) {
+      return `Лист «${sheetName}» не найден в таблице`;
+    }
+
+    // Шаг 2: ищем строку с нужным номером заявки в столбце A.
+    const lookupRange = encodeURIComponent(`${sheetName}!A:A`);
+    const lookup = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${lookupRange}`,
+      { headers },
+    );
+
+    if (!lookup.ok) {
+      return `Google Sheets ответил ${lookup.status} при поиске строки: ${await lookup.text()}`;
+    }
+
+    const values: string[][] = ((await lookup.json()) as { values?: string[][] }).values ?? [];
+    const index = values.findIndex((row) => row[0]?.trim() === orderId);
+
+    if (index === -1) {
+      // Строки нет в таблице (не успела попасть или уже удалена) — это не сбой.
+      return null;
+    }
+
+    // Шаг 3: удаляем найденную строку. startIndex/endIndex — с нуля,
+    // полуоткрытый интервал, поэтому конец равен номеру строки без сдвига.
+    const batchUpdate = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`,
+      {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [
+            {
+              deleteDimension: {
+                range: { sheetId, dimension: 'ROWS', startIndex: index, endIndex: index + 1 },
+              },
+            },
+          ],
+        }),
+      },
+    );
+
+    if (!batchUpdate.ok) {
+      return `Google Sheets ответил ${batchUpdate.status} при удалении строки: ${await batchUpdate.text()}`;
+    }
+
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : 'Неизвестная ошибка Google Sheets';
+  }
+}

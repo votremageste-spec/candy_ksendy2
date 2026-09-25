@@ -11,6 +11,7 @@ import { getIdToken } from '@/lib/admin-auth';
 import type {
   AdminOrder,
   AdminOrdersResponse,
+  OrderDeleteResponse,
   OrderStatus,
   OrderStatusResponse,
 } from '@/types/api';
@@ -76,6 +77,22 @@ export async function updateOrderStatus(
     method: 'POST',
     body: JSON.stringify({ orderId, status }),
   })) as OrderStatusResponse;
+
+  return { sheetSynced: payload.sheetSynced, sheetError: payload.sheetError };
+}
+
+/**
+ * Удаление заявки.
+ * Возвращает признак того, удалось ли убрать и строку из Google Таблицы:
+ * если нет, админка покажет предупреждение, но заявка всё равно исчезнет.
+ */
+export async function deleteOrder(
+  orderId: string,
+): Promise<{ sheetSynced: boolean; sheetError?: string }> {
+  const payload = (await authorizedFetch('/api/order-delete', {
+    method: 'POST',
+    body: JSON.stringify({ orderId }),
+  })) as OrderDeleteResponse;
 
   return { sheetSynced: payload.sheetSynced, sheetError: payload.sheetError };
 }

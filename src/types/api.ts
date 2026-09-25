@@ -126,6 +126,21 @@ export interface OrderStatusResponse {
   sheetError?: string;
 }
 
+export interface OrderDeleteRequest {
+  orderId: string;
+}
+
+export interface OrderDeleteResponse {
+  ok: true;
+  /**
+   * Удалось ли убрать строку из Google Таблицы.
+   * Заявка из базы удаляется в любом случае: рассинхрон с таблицей —
+   * повод показать предупреждение, а не отменять действие.
+   */
+  sheetSynced: boolean;
+  sheetError?: string;
+}
+
 export interface AdminErrorResponse {
   ok: false;
   error: string;

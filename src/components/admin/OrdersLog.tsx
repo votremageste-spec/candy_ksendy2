@@ -11,14 +11,15 @@
  */
 
 import { useState } from 'react';
-import { ChevronDown, MessageSquare, Phone, TriangleAlert } from 'lucide-react';
+import { ChevronDown, MessageSquare, Phone, Trash2, TriangleAlert } from 'lucide-react';
 import { formatPrice, formatQuantity } from '@/lib/pricing';
-import { updateOrderStatus } from '@/lib/adminApi';
+import { deleteOrder, updateOrderStatus } from '@/lib/adminApi';
 import { ORDER_STATUS_LABELS, type AdminOrder, type OrderStatus } from '@/types/api';
 
 interface OrdersLogProps {
   orders: AdminOrder[];
   onChanged: (orderId: string, status: OrderStatus) => void;
+  onDeleted: (orderId: string) => void;
   onError: (message: string) => void;
   onNotice: (message: string) => void;
 }
@@ -64,14 +65,16 @@ function describeUrgency(iso: string): { label: string; isUrgent: boolean } | nu
   return null;
 }
 
-function OrderCard({ order, onChanged, onError, onNotice }: {
+function OrderCard({ order, onChanged, onDeleted, onError, onNotice }: {
   order: AdminOrder;
   onChanged: OrdersLogProps['onChanged'];
+  onDeleted: OrdersLogProps['onDeleted'];
   onError: OrdersLogProps['onError'];
   onNotice: OrdersLogProps['onNotice'];
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const urgency = describeUrgency(order.pickupTime);
 
@@ -94,6 +97,28 @@ function OrderCard({ order, onChanged, onError, onNotice }: {
       onError(error instanceof Error ? error.message : 'Не удалось изменить статус');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (isDeleting) return;
+    if (!window.confirm(`Удалить заявку ${order.id}? Это действие нельзя отменить.`)) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteOrder(order.id);
+      onDeleted(order.id);
+
+      if (!result.sheetSynced) {
+        onNotice(
+          `Заявка удалена, но строку в Google Таблице убрать не удалось — удалите вручную. ${
+            result.sheetError ?? ''
+          }`.trim(),
+        );
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Не удалось удалить заявку');
+      setIsDeleting(false);
     }
   };
 
@@ -229,17 +254,29 @@ function OrderCard({ order, onChanged, onError, onNotice }: {
             </div>
           </div>
 
-          <p className="mt-4 text-[11px] text-text-muted">
-            Подана {formatDateTime(order.createdAt)} ·{' '}
-            {order.source === 'telegram_mini_app' ? 'из Telegram' : 'с сайта'}
-          </p>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
+            <p className="text-[11px] text-text-muted">
+              Подана {formatDateTime(order.createdAt)} ·{' '}
+              {order.source === 'telegram_mini_app' ? 'из Telegram' : 'с сайта'}
+            </p>
+
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleDelete}
+              className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-[10px] border border-border px-3 py-2 text-[13px] text-text-muted transition-colors duration-200 hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />
+              {isDeleting ? 'Удаление…' : 'Удалить'}
+            </button>
+          </div>
         </div>
       )}
     </article>
   );
 }
 
-export function OrdersLog({ orders, onChanged, onError, onNotice }: OrdersLogProps) {
+export function OrdersLog({ orders, onChanged, onDeleted, onError, onNotice }: OrdersLogProps) {
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
 
   const visible = filter === 'all' ? orders : orders.filter((order) => order.status === filter);
@@ -300,6 +337,7 @@ export function OrdersLog({ orders, onChanged, onError, onNotice }: OrdersLogPro
             key={order.id}
             order={order}
             onChanged={onChanged}
+            onDeleted={onDeleted}
             onError={onError}
             onNotice={onNotice}
           />

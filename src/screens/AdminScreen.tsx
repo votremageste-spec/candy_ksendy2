@@ -108,6 +108,10 @@ export function AdminScreen() {
     );
   };
 
+  const handleOrderDeleted = (orderId: string) => {
+    setOrders((previous) => previous.filter((order) => order.id !== orderId));
+  };
+
   /* ──────────────────── Отрисовка состояний ──────────────────── */
 
   if (!isFirebaseConfigured) {
@@ -285,6 +289,7 @@ export function AdminScreen() {
               <OrdersLog
                 orders={orders}
                 onChanged={handleStatusChanged}
+                onDeleted={handleOrderDeleted}
                 onError={(text) => setBanner({ text, tone: 'error' })}
                 onNotice={(text) => setBanner({ text, tone: 'notice' })}
               />
